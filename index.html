@@ -11,6 +11,8 @@
   <link rel="stylesheet" href="src/style.css" />
   <!-- Supabase CDN -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- HTML2PDF CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 </head>
 <body>
   <!-- Authentication Overlay -->
@@ -131,6 +133,7 @@
       <div class="modal-header">
         <h3>Invoice</h3>
         <div class="modal-actions">
+          <button class="btn btn-outline btn-sm" onclick="downloadPDF()">📥 Download PDF</button>
           <button class="btn btn-primary btn-sm" onclick="printInvoice()">🖨️ Print</button>
           <button class="btn btn-ghost btn-sm" onclick="closeInvoiceModal()">✕ Close</button>
         </div>

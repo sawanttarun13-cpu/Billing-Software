@@ -74,7 +74,7 @@ function startClock() {
 }
 
 // ── Toast ──────────────────────────────────────────────────── //
-function showToast(message, type = 'info') {
+window.showToast = function showToast(message, type = 'info') {
   const icons = { success: '✅', error: '❌', info: 'ℹ️' };
   const container = document.getElementById('toast-container');
   const toast = document.createElement('div');

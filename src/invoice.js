@@ -100,9 +100,16 @@ function buildInvoiceHTML(bill) {
 let _currentPrintBill = null;
 
 function showInvoiceModal(bill) {
-  _currentPrintBill = bill;
-  document.getElementById('invoice-body').innerHTML = buildInvoiceHTML(bill);
-  document.getElementById('invoice-modal').style.display = 'flex';
+  try {
+    _currentPrintBill = bill;
+    const body = document.getElementById('invoice-body');
+    if (!body) throw new Error('Invoice container not found');
+    body.innerHTML = buildInvoiceHTML(bill);
+    document.getElementById('invoice-modal').style.display = 'flex';
+  } catch (err) {
+    console.error('Invoice Modal Error:', err);
+    showToast('Failed to show invoice: ' + err.message, 'error');
+  }
 }
 
 function closeInvoiceModal() {
@@ -175,12 +182,50 @@ function printInvoice() {
         }
       </div>
       <script>
-        window.onload = () => { setTimeout(() => { window.focus(); window.print(); }, 200); };
+        window.onload = () => { 
+          setTimeout(() => { 
+            window.focus(); 
+            window.print(); 
+          }, 500); 
+        };
       </script>
     </body>
     </html>
   `;
   const win = window.open('', '_blank', 'width=850,height=900');
+  if (!win) {
+    if (window.showToast) window.showToast('Please allow pop-ups to print the invoice', 'error');
+    else alert('Please allow pop-ups to print the invoice');
+    return;
+  }
   win.document.write(printContent);
   win.document.close();
+}
+
+/**
+ * Downloads the current invoice as a PDF using html2pdf.js
+ */
+function downloadPDF() {
+  if (!_currentPrintBill) return;
+  
+  const element = document.getElementById('invoice-body');
+  const opt = {
+    margin:       10,
+    filename:     `Invoice_${_currentPrintBill.billNo}.pdf`,
+    image:        { type: 'jpeg', quality: 0.98 },
+    html2canvas:  { scale: 2, useCORS: true, letterRendering: true },
+    jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+  };
+
+  // Show a loading toast if possible
+  if (window.showToast) window.showToast('Generating PDF...', 'info');
+
+  html2pdf().set(opt).from(element).save()
+    .then(() => {
+      if (window.showToast) window.showToast('PDF downloaded successfully! ✅', 'success');
+    })
+    .catch(err => {
+      console.error('PDF Error:', err);
+      if (window.showToast) window.showToast('Failed to generate PDF', 'error');
+    });
 }

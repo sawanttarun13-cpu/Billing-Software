@@ -11,14 +11,16 @@ let _customer = '';
 let _customerId = null;
 let _paymentMode = 'Cash';
 
-function renderBilling() {
-  _cart = [];
-  _activeCategory = 'All';
-  _searchTerm = '';
-  _discountVal = 0;
-  _customer = '';
-  _customerId = null;
-  _paymentMode = 'Cash';
+function renderBilling(skipReset = false) {
+  if (!skipReset) {
+    _cart = [];
+    _activeCategory = 'All';
+    _searchTerm = '';
+    _discountVal = 0;
+    _customer = '';
+    _customerId = null;
+    _paymentMode = 'Cash';
+  }
 
   const holdBills = DB.getHoldBills();
 
@@ -237,7 +239,8 @@ function addToCart(productId) {
     existing.qty++;
     existing.total = +(existing.qty * existing.price).toFixed(2);
   } else {
-    _cart.push({ id: product.id, name: product.name, price: product.price, costPrice: product.costPrice || 0, qty: 1, unit: product.unit, total: product.price });
+    const price = Number(product.price);
+    _cart.push({ id: product.id, name: product.name, price: price, costPrice: product.costPrice || 0, qty: 1, unit: product.unit, total: price });
   }
   updateCartDisplay();
   showToast(`${product.name} added`, 'info');
@@ -342,7 +345,7 @@ function holdCurrentBill() {
   const holdId = DB.holdBill(holdData);
   showToast('Bill put on hold ⏸', 'info');
   clearCart();
-  renderBilling(); // refresh to show hold count
+  renderBilling(false); // full reset
 }
 
 function showHoldBillPicker() {
@@ -388,8 +391,8 @@ function resumeHold(holdId) {
   if (cn && _customer) cn.value = _customer;
   setPaymentMode(_paymentMode);
   showToast(`Bill for "${_customer || 'Walk-in'}" resumed ✅`, 'success');
-  renderBilling();
-  // Re-apply state after re-render
+  renderBilling(true);
+  // Re-apply state after re-render if needed
   setTimeout(() => {
     _cart = held.cart || [];
     _customer = held.customer || '';
@@ -409,7 +412,7 @@ function resumeHold(holdId) {
 function discardHold(holdId) {
   DB.deleteHoldBill(holdId);
   showHoldBillPicker();
-  renderBilling();
+  renderBilling(true);
   showToast('Hold bill discarded', 'info');
 }
 
@@ -454,40 +457,50 @@ function calcChange() {
 
 /* ── Checkout ─────────────────────────────────────────────── */
 function checkoutBilling() {
-  if (_cart.length === 0) { showToast('Cart is empty!', 'error'); return; }
-  const s = DB.getSettings();
-  const taxRate = s.taxRate / 100;
-  const subtotal = +_cart.reduce((sum, i) => sum + i.total, 0).toFixed(2);
-  let discount = _discountType === 'pct'
-    ? +(subtotal * (_discountVal / 100)).toFixed(2)
-    : Math.min(+(_discountVal).toFixed(2), subtotal);
-  const taxable = subtotal - discount;
-  const tax = +(taxable * taxRate).toFixed(2);
-  const total = +(taxable + tax).toFixed(2);
+  try {
+    if (_cart.length === 0) { showToast('Cart is empty!', 'error'); return; }
+    const s = DB.getSettings();
+    const taxRate = s.taxRate / 100;
+    const subtotal = +_cart.reduce((sum, i) => sum + Number(i.total), 0).toFixed(2);
+    let discount = _discountType === 'pct'
+      ? +(subtotal * (_discountVal / 100)).toFixed(2)
+      : Math.min(+(_discountVal).toFixed(2), subtotal);
+    const taxable = subtotal - discount;
+    const tax = +(taxable * taxRate).toFixed(2);
+    const total = +(taxable + tax).toFixed(2);
 
-  const custName = (document.getElementById('customer-name')?.value || _customer || 'Walk-in Customer').trim();
+    const custName = (document.getElementById('customer-name')?.value || _customer || 'Walk-in Customer').trim();
 
-  const bill = DB.saveBill({
-    customer: custName,
-    customerId: _customerId,
-    items: _cart.map(i => ({ ...i })),
-    subtotal, discount,
-    discountType: _discountType,
-    tax, taxRate: s.taxRate,
-    total,
-    paymentMode: _paymentMode,
-  });
+    const bill = DB.saveBill({
+      customer: custName,
+      customerId: _customerId,
+      items: _cart.map(i => ({ ...i })),
+      subtotal, discount,
+      discountType: _discountType,
+      tax, taxRate: s.taxRate,
+      total,
+      paymentMode: _paymentMode,
+    });
 
-  // Award loyalty points (1 point per ₹10 spent)
-  if (_customerId) {
-    DB.addCustomerPoints(_customerId, Math.floor(total / 10));
+    // Adjust Stock
+    _cart.forEach(item => {
+      DB.adjustStock(item.id, -item.qty, 'Sale: #' + bill.billNo);
+    });
+
+    // Award loyalty points (1 point per ₹10 spent)
+    if (_customerId) {
+      DB.addCustomerPoints(_customerId, Math.floor(total / 10));
+    }
+
+    showToast(`Bill ${bill.billNo} generated! ✅`, 'success');
+    showInvoiceModal(bill);
+    _cart = [];
+    _discountVal = 0;
+    _customer = '';
+    _customerId = null;
+    updateCartDisplay();
+  } catch (err) {
+    console.error('Checkout Error:', err);
+    showToast('Failed to generate bill: ' + err.message, 'error');
   }
-
-  showToast(`Bill ${bill.billNo} generated! ✅`, 'success');
-  showInvoiceModal(bill);
-  _cart = [];
-  _discountVal = 0;
-  _customer = '';
-  _customerId = null;
-  updateCartDisplay();
 }
