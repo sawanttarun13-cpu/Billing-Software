@@ -1,0 +1,56 @@
+# Grocery Billing Software — Walkthrough
+
+## What Was Built
+
+A **fully self-contained grocery shop billing app** built with Vanilla HTML + CSS + JavaScript. No build tools, no backend, no installation required — just open [index.html](file:///c:/Users/Tarun/OneDrive/Desktop/Antigravity/index.html) in any browser.
+
+## Project Structure
+
+```
+Antigravity/
+├── index.html              ← App shell: sidebar, topbar, modals
+└── src/
+    ├── style.css           ← Full design system (dark theme, glassmorphism)
+    ├── db.js               ← localStorage data layer + 24 seed products
+    ├── invoice.js          ← Invoice HTML builder + print popup
+    ├── main.js             ← SPA router, sidebar toggle, clock, toasts
+    └── pages/
+        ├── dashboard.js    ← Stats, SVG revenue chart, top products
+        ├── billing.js      ← POS: grid, cart, discount, hold bills, calculator
+        ├── products.js     ← CRUD table, cost/profit, stock adjustments
+        ├── customers.js    ← CRM table, loyalty points, purchase history
+        ├── reports.js      ← GST, revenue, category, stock, and profit reports
+        ├── history.js      ← Paginated bill history, date filter, reprint
+        └── settings.js     ← Shop info, accent color, backup/restore data
+```
+
+## Features
+
+| Page | Features |
+|---|---|
+| **Dashboard** | Revenue stats **+ Profit margin**, 7-day chart, top products, recent bills, **Low stock alerts banner** |
+| **New Bill (POS)** | Product grid, cart, discount, **Customer autofill & link, Cash/Change Calculator, Hold Bills & Resume, Payment Mode**, printable invoice |
+| **Products** | Sortable table, **Cost price & profit margin column**, add/edit modal, **Stock adjustments modal + history**, CSV export |
+| **Customers** | **NEW: Customer CRM table, Loyalty points (1 pt/₹10), Add/Edit modal, Purchase history drill-down panel** |
+| **Reports** | **NEW: 5 tabs (GST collected by tax bracket, Monthly revenue + 7-day profit, Category revenue, Low stock status + movement log, Profit margin by product)** |
+| **Bill History** | Paginated table (15/page), date-range filter, search, click-to-view invoice, reprint button, **Payment Mode display** |
+| **Settings** | Shop info, tax rate, currency, accent color picker, **Data Backup (export JSON) & Restore (import JSON)**, clear bills/products |
+
+## How to Open
+
+```
+# Option 1: Double-click index.html (opens in browser)
+# Option 2: Via local server (already running):
+http://localhost:8765
+
+# Start server manually:
+cd c:\Users\Tarun\OneDrive\Desktop\Antigravity
+python -m http.server 8765
+```
+
+## Keyboard Shortcut
+- `Ctrl+B` → Jump to New Bill (POS)
+- `Escape` → Close any open modal
+
+## Data Persistence
+All data (products, bills, settings) is stored in **browser localStorage** — survives page refreshes. No internet connection required after the first load (Google Fonts may not load offline, but the app works).

@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GroceryBill Pro – Grocery Shop Billing</title>
+  <meta name="description" content="Modern grocery shop billing software with POS, inventory management, sales history, and reports." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="src/style.css" />
+  <!-- Supabase CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+  <!-- Authentication Overlay -->
+  <div id="auth-overlay" class="auth-overlay">
+    <div class="auth-container">
+      <div class="auth-header">
+        <div class="brand-icon" style="font-size: 3rem; margin-bottom: 1rem;">🛒</div>
+        <h2>Welcome to GroceryBill Pro</h2>
+        <p>Please sign in to continue.</p>
+      </div>
+
+      <div class="auth-tabs">
+        <button class="auth-tab active" id="tab-login" onclick="switchAuthTab('login')">Login</button>
+        <button class="auth-tab" id="tab-signup" onclick="switchAuthTab('signup')">Sign Up</button>
+      </div>
+
+      <form id="auth-form" onsubmit="handleAuthSubmit(event)">
+        <div class="form-group">
+          <label for="auth-email">Email</label>
+          <input type="email" id="auth-email" class="form-control" required autocomplete="email" placeholder="shop@grocery.com" />
+        </div>
+        <div class="form-group">
+          <label for="auth-password">Password</label>
+          <input type="password" id="auth-password" class="form-control" required autocomplete="current-password" placeholder="••••••••" />
+        </div>
+        
+        <div id="auth-error" class="auth-error"></div>
+        
+        <button type="submit" class="btn btn-primary" id="auth-submit-btn" style="width: 100%; margin-top: 1rem;">
+          Sign In
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <div id="app" style="display: none;">
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-brand">
+        <div class="brand-icon">🛒</div>
+        <div class="brand-text">
+          <span class="brand-name" id="sidebar-shop-name">GroceryBill Pro</span>
+          <span class="brand-sub">Billing Software</span>
+        </div>
+      </div>
+
+      <nav class="sidebar-nav">
+        <a class="nav-item active" data-page="dashboard" href="#dashboard" id="nav-dashboard">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+          <span>Dashboard</span>
+        </a>
+        <a class="nav-item" data-page="billing" href="#billing" id="nav-billing">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="15" y2="16"/></svg>
+          <span>New Bill</span>
+          <span class="nav-badge">POS</span>
+        </a>
+        <a class="nav-item" data-page="products" href="#products" id="nav-products">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+          <span>Products</span>
+        </a>
+        <a class="nav-item" data-page="history" href="#history" id="nav-history">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12,6 12,12 16,14"/></svg>
+          <span>Bill History</span>
+        </a>
+        <a class="nav-item" data-page="customers" href="#customers" id="nav-customers">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          <span>Customers</span>
+        </a>
+        <a class="nav-item" data-page="reports" href="#reports" id="nav-reports">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg>
+          <span>Reports</span>
+        </a>
+        <a class="nav-item" data-page="settings" href="#settings" id="nav-settings">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93A10 10 0 0 0 4.93 19.07M19.07 19.07A10 10 0 0 0 4.93 4.93"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2"/></svg>
+          <span>Settings</span>
+        </a>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="datetime-display" id="datetime-display">
+          <span id="clock-time">20:23</span>
+          <span id="clock-date">14 Mar 2026</span>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Area -->
+    <div class="main-wrapper">
+      <header class="topbar">
+        <div class="topbar-left">
+          <button class="menu-toggle" id="menu-toggle" title="Toggle Sidebar">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+          </button>
+          <h1 class="page-title" id="page-title">Dashboard</h1>
+        </div>
+        <div class="topbar-right">
+          <button class="btn btn-primary btn-sm" onclick="navigate('billing')" id="topbar-new-bill">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            New Bill
+          </button>
+          <!-- Logout Button -->
+          <button class="btn btn-ghost btn-sm" id="topbar-logout" style="margin-left: 0.5rem; color: var(--danger);">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+            Logout
+          </button>
+        </div>
+      </header>
+
+      <main class="page-content" id="page-content">
+        <!-- Pages render here -->
+      </main>
+    </div>
+  </div>
+
+  <!-- Invoice Modal -->
+  <div class="modal-overlay" id="invoice-modal" style="display:none">
+    <div class="modal invoice-modal">
+      <div class="modal-header">
+        <h3>Invoice</h3>
+        <div class="modal-actions">
+          <button class="btn btn-primary btn-sm" onclick="printInvoice()">🖨️ Print</button>
+          <button class="btn btn-ghost btn-sm" onclick="closeInvoiceModal()">✕ Close</button>
+        </div>
+      </div>
+      <div class="invoice-body" id="invoice-body"></div>
+    </div>
+  </div>
+
+  <!-- Product Modal -->
+  <div class="modal-overlay" id="product-modal" style="display:none">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="product-modal-title">Add Product</h3>
+        <button class="btn btn-ghost btn-sm" onclick="closeProductModal()">✕</button>
+      </div>
+      <div class="modal-body" id="product-modal-body"></div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <!-- Print Styles injected -->
+  <style id="print-styles"></style>
+
+  <script src="src/db.js"></script>
+  <script src="src/invoice.js"></script>
+  <script src="src/pages/dashboard.js"></script>
+  <script src="src/pages/billing.js"></script>
+  <script src="src/pages/products.js"></script>
+  <script src="src/pages/customers.js"></script>
+  <script src="src/pages/reports.js"></script>
+  <script src="src/pages/history.js"></script>
+  <script src="src/pages/settings.js"></script>
+  
+  <!-- Make main a module so we can import supabase/auth -->
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>
