@@ -490,7 +490,7 @@ tbody tr:last-child { border-bottom: none; }
 }
 @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 
-.invoice-modal { max-width: 720px; }
+.invoice-modal { max-width: 800px; }
 .modal-header {
   display: flex;
   align-items: center;
@@ -768,36 +768,9 @@ tbody tr:last-child { border-bottom: none; }
 }
 
 /* ── Invoice Print View ────────────────────────────────────── */
-.invoice-body { padding: 24px; font-family: var(--font); }
-.inv-header { text-align: center; margin-bottom: 20px; }
-.inv-shop-name { font-size: 1.4rem; font-weight: 800; color: var(--text); margin-bottom: 4px; }
-.inv-shop-sub { font-size: 0.82rem; color: var(--text2); line-height: 1.6; }
-.inv-divider { border: none; border-top: 1px dashed var(--border); margin: 14px 0; }
-.inv-meta {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 6px;
-  margin-bottom: 18px;
-  font-size: 0.83rem;
-}
-.inv-meta-item { color: var(--text2); }
-.inv-meta-item strong { color: var(--text); }
-.inv-table { width: 100%; border-collapse: collapse; font-size: 0.83rem; margin-bottom: 14px; }
-.inv-table th {
-  text-align: left;
-  padding: 8px 10px;
-  background: var(--surface2);
-  font-size: 0.72rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: var(--text3);
-}
-.inv-table td { padding: 8px 10px; border-bottom: 1px solid var(--border); }
-.inv-totals { text-align: right; font-size: 0.85rem; }
-.inv-totals .row { display: flex; justify-content: space-between; padding: 4px 0; color: var(--text2); }
-.inv-totals .grand { font-size: 1rem; font-weight: 800; color: var(--text); border-top: 1px solid var(--border); padding-top: 8px; margin-top: 6px; }
-.inv-footer { text-align: center; margin-top: 20px; font-size: 0.78rem; color: var(--text3); padding-top: 14px; border-top: 1px dashed var(--border); }
+.invoice-body { padding: 40px; font-family: var(--font); background: #fff; color: #1a1a1a; border-radius: 0 0 var(--radius) var(--radius); }
+.inv-table td { padding: 12px 8px; border-bottom: 1px solid var(--border); }
+.inv-table th { border-bottom: 2px solid var(--border); }
 
 /* ── History ───────────────────────────────────────────────── */
 .history-filters {
