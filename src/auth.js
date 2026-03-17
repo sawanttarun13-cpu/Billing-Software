@@ -65,5 +65,36 @@ export const auth = {
       console.error('Sign out error:', error);
       return { success: false, error };
     }
+  },
+
+  /**
+   * Sign in with Google OAuth
+   * @param {string} loginHint Optional email to pre-fill in Google login
+   */
+  async signInWithGoogle(loginHint = null) {
+    try {
+      const options = {
+        provider: 'google',
+        options: {
+          redirectTo: window.location.origin,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          },
+        },
+      };
+
+      if (loginHint) {
+        options.options.queryParams.login_hint = loginHint;
+      }
+
+      const { data, error } = await supabase.auth.signInWithOAuth(options);
+
+      if (error) throw error;
+      return { success: true, data };
+    } catch (error) {
+      console.error('Google sign in error:', error);
+      return { success: false, error };
+    }
   }
 };

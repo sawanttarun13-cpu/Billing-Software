@@ -153,6 +153,48 @@ function initAuth() {
       showToast('Logged out successfully', 'info');
     });
   }
+
+  // Wire up Google Login
+  const googleBtn = document.getElementById('google-login-btn');
+  if (googleBtn) {
+    googleBtn.addEventListener('click', async () => {
+      const btn = googleBtn;
+      const originalText = btn.textContent;
+      const email = document.getElementById('auth-email').value;
+      const errEl = document.getElementById('auth-error');
+      
+      btn.disabled = true;
+      btn.textContent = 'Connecting...';
+      errEl.textContent = '';
+      
+      // Pass the typed email to Google to make it "direct" (pre-filled)
+      const result = await auth.signInWithGoogle(email || null);
+      
+      if (!result.success) {
+        if (result.error.message?.includes('provider is not enabled')) {
+          errEl.innerHTML = `<strong>Fix Required:</strong> Google Login is not yet enabled in your Supabase dashboard.<br><a href="https://supabase.com/dashboard/project/spxctiaqjicdgchqvzuk/auth/providers" target="_blank" style="color:var(--accent); text-decoration:underline;">Click here to enable it now</a>`;
+        } else {
+          errEl.textContent = result.error.message || 'Google Login failed';
+        }
+        errEl.style.color = 'var(--danger)';
+        btn.disabled = false;
+        btn.textContent = originalText;
+      }
+    });
+  }
+
+  // Smart Detection: Highlight Google button when Gmail is entered
+  const emailInput = document.getElementById('auth-email');
+  if (emailInput && googleBtn) {
+    emailInput.addEventListener('input', (e) => {
+      const isGmail = e.target.value.toLowerCase().endsWith('@gmail.com');
+      if (isGmail) {
+        googleBtn.classList.add('glow-pulse');
+      } else {
+        googleBtn.classList.remove('glow-pulse');
+      }
+    });
+  }
 }
 
 // Attach auth handlers to window for HTML inline access
