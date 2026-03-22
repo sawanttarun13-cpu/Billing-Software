@@ -73,10 +73,15 @@ export const auth = {
    */
   async signInWithGoogle(loginHint = null) {
     try {
+      // OAuth does not work with the file:// protocol.
+      if (window.location.protocol === 'file:') {
+        throw new Error('Google Login does not work when opening the file directly (file://). Please use a local server like Live Server or python -m http.server.');
+      }
+
       const options = {
         provider: 'google',
         options: {
-          redirectTo: window.location.origin,
+          redirectTo: window.location.origin + window.location.pathname,
           queryParams: {
             access_type: 'offline',
             prompt: 'consent',

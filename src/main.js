@@ -173,6 +173,8 @@ function initAuth() {
       if (!result.success) {
         if (result.error.message?.includes('provider is not enabled')) {
           errEl.innerHTML = `<strong>Fix Required:</strong> Google Login is not yet enabled in your Supabase dashboard.<br><a href="https://supabase.com/dashboard/project/spxctiaqjicdgchqvzuk/auth/providers" target="_blank" style="color:var(--accent); text-decoration:underline;">Click here to enable it now</a>`;
+        } else if (result.error.message?.includes('file://')) {
+          errEl.innerHTML = `<strong>Local Server Required:</strong> ${result.error.message}<br><br><em>Tip: Right-click index.html and select "Open with Live Server" or run <code>python -m http.server</code> in the project folder.</em>`;
         } else {
           errEl.textContent = result.error.message || 'Google Login failed';
         }
