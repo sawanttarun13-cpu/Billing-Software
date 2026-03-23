@@ -78,10 +78,15 @@ export const auth = {
         throw new Error('Google Login does not work when opening the file directly (file://). Please use a local server like Live Server or python -m http.server.');
       }
 
+      // Use only the origin (no pathname) so the redirect always lands on the
+      // root of the app regardless of how it is served (Live Server, GitHub
+      // Pages, Netlify, etc.).  Supabase will append the #access_token fragment.
+      const redirectTo = window.location.origin + '/';
+
       const options = {
         provider: 'google',
         options: {
-          redirectTo: window.location.origin + window.location.pathname,
+          redirectTo,
           queryParams: {
             access_type: 'offline',
             prompt: 'consent',

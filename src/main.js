@@ -268,9 +268,18 @@ function boot() {
   startClock();
   initKeyboardShortcuts();
 
-  // Route based on URL hash
+  // Don't use the hash for routing if it contains an OAuth callback token.
+  // Supabase will consume the #access_token fragment via onAuthStateChange.
   const hash = location.hash.replace('#', '');
-  navigate(PAGES[hash] ? hash : 'dashboard');
+  const isOAuthCallback = hash.includes('access_token') || hash.includes('error_description');
+  
+  if (!isOAuthCallback) {
+    navigate(PAGES[hash] ? hash : 'dashboard');
+  } else {
+    // Clean up the ugly token from the address bar once Supabase has consumed it
+    history.replaceState(null, '', location.pathname || '/');
+    navigate('dashboard');
+  }
   
   window.__appBooted = true;
 }
