@@ -469,10 +469,24 @@ function checkoutBilling() {
     const tax = +(taxable * taxRate).toFixed(2);
     const total = +(taxable + tax).toFixed(2);
 
-    const custName = (document.getElementById('customer-name')?.value || _customer || 'Walk-in Customer').trim();
+    const custName = (document.getElementById('customer-name')?.value || _customer || '').trim();
+    const isWalkIn = !custName || custName.toLowerCase() === 'walk-in customer';
+    const finalName = isWalkIn ? 'Walk-in Customer' : custName;
+
+    // Auto-create customer if a name was typed but not picked from dropdown
+    if (!isWalkIn && !_customerId) {
+      const existing = DB.getCustomers().find(c => c.name.toLowerCase() === custName.toLowerCase());
+      if (existing) {
+        _customerId = existing.id;
+      } else {
+        const newCust = DB.saveCustomer({ id: null, name: custName, phone: '', email: '', address: '', points: 0 });
+        _customerId = newCust.id;
+        showToast(`New customer "${custName}" added to Customers 👤`, 'info');
+      }
+    }
 
     const bill = DB.saveBill({
-      customer: custName,
+      customer: finalName,
       customerId: _customerId,
       items: _cart.map(i => ({ ...i })),
       subtotal, discount,
@@ -504,3 +518,4 @@ function checkoutBilling() {
     showToast('Failed to generate bill: ' + err.message, 'error');
   }
 }
+

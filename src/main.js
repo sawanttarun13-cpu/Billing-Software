@@ -17,7 +17,9 @@ const PAGES = {
 let _currentPage = 'dashboard';
 
 // ── Navigation ─────────────────────────────────────────────── //
-function navigate(page) {
+// Exposed on window so inline onclick="navigate(...)" in index.html works
+// (ES modules are not globally scoped)
+window.navigate = function navigate(page) {
   if (!PAGES[page]) page = 'dashboard';
   _currentPage = page;
 
