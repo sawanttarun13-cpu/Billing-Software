@@ -31,6 +31,49 @@
   --font:      'Inter', system-ui, sans-serif;
 }
 
+/* ── Dark Mode Variables ────────────────────────────────────── */
+[data-theme="dark"] {
+  --bg:        #0F172A;
+  --surface:   #1E293B;
+  --surface2:  #253347;
+  --surface3:  #334155;
+  --border:    #334155;
+  --text:      #F1F5F9;
+  --text2:     #CBD5E1;
+  --text3:     #94A3B8;
+  --shadow:    0 4px 24px rgba(0,0,0,0.35);
+  --shadow-lg: 0 8px 40px rgba(0,0,0,0.5);
+}
+
+/* ── Theme Toggle Button ─────────────────────────────────────── */
+.theme-toggle {
+  background: none;
+  border: 1.5px solid var(--border);
+  color: var(--text2);
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  transition: all var(--trans);
+  position: relative;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.theme-toggle:hover {
+  background: var(--surface2);
+  border-color: var(--accent);
+  color: var(--accent);
+  transform: rotate(20deg);
+}
+.theme-toggle svg {
+  width: 18px; height: 18px;
+  position: absolute;
+  transition: opacity 0.3s ease, transform 0.4s ease;
+}
+.theme-toggle .icon-sun  { opacity: 1; transform: scale(1) rotate(0deg); }
+.theme-toggle .icon-moon { opacity: 0; transform: scale(0.5) rotate(-90deg); }
+[data-theme="dark"] .theme-toggle .icon-sun  { opacity: 0; transform: scale(0.5) rotate(90deg); }
+[data-theme="dark"] .theme-toggle .icon-moon { opacity: 1; transform: scale(1) rotate(0deg); }
+
 /* ── Reset ─────────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html { font-size: 15px; scroll-behavior: smooth; }

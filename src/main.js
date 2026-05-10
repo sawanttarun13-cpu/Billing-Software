@@ -51,8 +51,24 @@ function initSidebar() {
     main.classList.toggle('full', collapsed);
   });
 }
+// ── Theme Toggle ────────────────────────────────────────────── //
+function initTheme() {
+  const btn = document.getElementById('theme-toggle-btn');
+  const root = document.documentElement;
 
-// ── Nav Clicks ─────────────────────────────────────────────── //
+  // Apply saved preference (default: light)
+  const saved = localStorage.getItem('theme') || 'light';
+  root.setAttribute('data-theme', saved);
+
+  btn.addEventListener('click', () => {
+    const current = root.getAttribute('data-theme');
+    const next = current === 'dark' ? 'light' : 'dark';
+    root.setAttribute('data-theme', next);
+    localStorage.setItem('theme', next);
+  });
+}
+
+
 function initNav() {
   document.querySelectorAll('.nav-item[data-page]').forEach(el => {
     el.addEventListener('click', (e) => {
@@ -266,6 +282,7 @@ function boot() {
   
   applySettingsToUI();
   initSidebar();
+  initTheme();
   initNav();
   startClock();
   initKeyboardShortcuts();
