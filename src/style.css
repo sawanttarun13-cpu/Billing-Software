@@ -968,3 +968,94 @@ tbody tr:last-child { border-bottom: none; }
     font-family: var(--font);
   }
 }
+
+/* ── Product Image Upload Widget ──────────────────────────── */
+.img-upload-zone {
+  width: 120px;
+  height: 120px;
+  border: 2px dashed var(--border);
+  border-radius: var(--radius);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all var(--trans);
+  position: relative;
+  overflow: hidden;
+  background: var(--surface2);
+  flex-shrink: 0;
+}
+.img-upload-zone:hover {
+  border-color: var(--accent);
+  background: rgba(34,197,94,0.06);
+}
+.img-upload-zone.drag-over {
+  border-color: var(--accent);
+  background: rgba(34,197,94,0.12);
+  transform: scale(1.03);
+}
+.img-upload-zone.has-image {
+  border-style: solid;
+  border-color: var(--border);
+  background: transparent;
+}
+.img-upload-zone img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.img-upload-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 10px;
+  text-align: center;
+  color: var(--text3);
+  pointer-events: none;
+}
+.img-upload-placeholder svg {
+  width: 36px;
+  height: 36px;
+  color: var(--text3);
+}
+.img-upload-placeholder span {
+  font-size: 0.7rem;
+  font-weight: 500;
+  line-height: 1.3;
+}
+.img-upload-hint {
+  font-size: 0.65rem !important;
+  color: var(--text3);
+  opacity: 0.7;
+}
+.img-upload-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.52);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity var(--trans);
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 600;
+  pointer-events: none;
+}
+.img-upload-zone.has-image:hover .img-upload-overlay {
+  opacity: 1;
+}
+
+/* Product card image in billing grid */
+.product-card img.pc-img {
+  width: 64px;
+  height: 64px;
+  object-fit: cover;
+  border-radius: 8px;
+  margin-bottom: 8px;
+  border: 1px solid var(--border);
+}

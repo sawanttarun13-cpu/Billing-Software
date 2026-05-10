@@ -216,9 +216,25 @@ function renderProductGrid() {
   }
 
   const s = DB.getSettings();
-  el.innerHTML = products.map(p => `
+  el.innerHTML = products.map(p => {
+    // Build the thumbnail: image > emoji > colored initial
+    let thumb;
+    if (p.image) {
+      thumb = `<img class="pc-img" src="${p.image}" alt="${p.name}">`;
+    } else if (p.emoji && p.emoji !== '📦') {
+      thumb = `<span class="pc-emoji">${p.emoji}</span>`;
+    } else {
+      const colors = ['#22C55E','#3B82F6','#F59E0B','#EF4444','#8B5CF6','#06B6D4','#EC4899'];
+      const color = colors[(p.name.charCodeAt(0) || 0) % colors.length];
+      const initial = (p.name || '?')[0].toUpperCase();
+      thumb = `<span class="pc-emoji" style="width:52px;height:52px;border-radius:10px;
+        background:${color}22;color:${color};font-weight:800;font-size:1.3rem;
+        display:inline-flex;align-items:center;justify-content:center;
+        border:1px solid ${color}44;">${initial}</span>`;
+    }
+    return `
     <div class="product-card ${p.stock <= 0 ? 'out-of-stock' : ''}" onclick="addToCart('${p.id}')" title="${p.name} — ${s.currency}${p.price}/${p.unit}">
-      <span class="pc-emoji">${p.emoji || '🛒'}</span>
+      ${thumb}
       <div class="pc-name">${p.name}</div>
       <div class="pc-price">${s.currency}${Number(p.price).toFixed(2)}</div>
       <div class="pc-unit">per ${p.unit}</div>
@@ -227,8 +243,9 @@ function renderProductGrid() {
         : ''
       }
     </div>
-  `).join('');
+  `}).join('');
 }
+
 
 /* ── Cart ─────────────────────────────────────────────────── */
 function addToCart(productId) {
