@@ -251,8 +251,18 @@ function renderProductGrid() {
 function addToCart(productId) {
   const product = DB.getProducts().find(p => p.id === productId);
   if (!product) return;
+
+  if (product.stock <= 0) {
+    showToast(`${product.name} is out of stock!`, 'error');
+    return;
+  }
+
   const existing = _cart.find(c => c.id === productId);
   if (existing) {
+    if (existing.qty + 1 > product.stock) {
+      showToast(`Cannot add more. Only ${product.stock} ${product.unit} available.`, 'error');
+      return;
+    }
     existing.qty++;
     existing.total = +(existing.qty * existing.price).toFixed(2);
   } else {
@@ -266,6 +276,15 @@ function addToCart(productId) {
 function changeQty(id, delta) {
   const item = _cart.find(c => c.id === id);
   if (!item) return;
+
+  if (delta > 0) {
+    const product = DB.getProducts().find(p => p.id === id);
+    if (product && (item.qty + delta) > product.stock) {
+      showToast(`Cannot add more. Only ${product.stock} ${product.unit} available.`, 'error');
+      return;
+    }
+  }
+
   item.qty += delta;
   if (item.qty <= 0) _cart = _cart.filter(c => c.id !== id);
   else item.total = +(item.qty * item.price).toFixed(2);
