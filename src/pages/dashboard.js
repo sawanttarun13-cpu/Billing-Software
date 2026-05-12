@@ -224,3 +224,12 @@ function drawRevenueChart() {
     });
   }
 }
+
+/* Reflow canvas chart on window resize */
+let _dashResizeTimer;
+window.addEventListener('resize', () => {
+  clearTimeout(_dashResizeTimer);
+  _dashResizeTimer = setTimeout(() => {
+    if (document.getElementById('revChart')) drawRevenueChart();
+  }, 150);
+});

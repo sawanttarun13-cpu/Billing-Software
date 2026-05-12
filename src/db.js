@@ -38,6 +38,8 @@ const DB = (() => {
     thankYou: 'Thank you for shopping with us!',
     accentColor: '#00d4aa',
     lowStockThreshold: 10,
+    invoicePrefix: 'GB-',
+    billCounter: 1000,
   };
 
   /* ── Seed Products ────────────────────────────────────── */
@@ -196,10 +198,21 @@ const DB = (() => {
     const list = getBills();
     if (!bill.id) {
       bill.id = 'bill_' + Date.now();
-      const allBills = list.length + 1;
-      bill.billNo = 'GB-' + String(1000 + allBills).padStart(4, '0');
+      // Persisted sequential counter — survives bill clears & deletions
+      const s = getSettings();
+      const next = (s.billCounter || 1000) + 1;
+      bill.billNo = (s.invoicePrefix || 'GB-') + String(next).padStart(4, '0');
+      saveSettings({ ...s, billCounter: next });
       bill.date = new Date().toISOString();
       bill.settings = getSettings();
+      // Snapshot category on each item so it survives future product deletions
+      bill.items = bill.items.map(it => {
+        if (!it.category) {
+          const prod = getProducts().find(p => p.id === it.id);
+          it.category = prod ? prod.category : 'Other';
+        }
+        return it;
+      });
     }
     list.unshift(bill);
     localStorage.setItem(KEYS.bills, JSON.stringify(list));
@@ -270,13 +283,18 @@ const DB = (() => {
     });
     return { taxableTotal, taxTotal, grandTotal, bills, byRate, count: bills.length };
   }
-  function getCategoryRevenue() {
-    const bills = getBills();
+  function getCategoryRevenue(from, to) {
+    let bills = getBills();
+    if (from) { const f = new Date(from); f.setHours(0,0,0,0); bills = bills.filter(b => new Date(b.date) >= f); }
+    if (to)   { const t = new Date(to);   t.setHours(23,59,59,999); bills = bills.filter(b => new Date(b.date) <= t); }
     const map = {};
     bills.forEach(b => {
       b.items.forEach(it => {
-        const prod = getProducts().find(p => p.id === it.id);
-        const cat = prod ? prod.category : 'Other';
+        // Use snapshotted category; fall back to live product lookup for older bills
+        const cat = it.category || (() => {
+          const prod = getProducts().find(p => p.id === it.id);
+          return prod ? prod.category : 'Other';
+        })();
         if (!map[cat]) map[cat] = { category: cat, revenue: 0, qty: 0 };
         map[cat].revenue += it.total;
         map[cat].qty += it.qty;

@@ -212,7 +212,7 @@ function buildRevenueReport() {
 
 /* ── Category Report ──────────────────────────────────────── */
 function buildCategoryReport(from, to) {
-  const data = DB.getCategoryRevenue();
+  const data = DB.getCategoryRevenue(from, to);
   const s = DB.getSettings();
   const curr = s.currency;
   const maxRev = Math.max(...data.map(d => d.revenue), 1);

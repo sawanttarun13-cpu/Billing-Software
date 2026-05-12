@@ -147,15 +147,26 @@ function custAutofill(val) {
     c.name.toLowerCase().includes(val.toLowerCase()) || (c.phone || '').includes(val)
   ).slice(0, 5);
   if (matches.length === 0) { sug.style.display = 'none'; return; }
+
+  // Build with DOM nodes - never interpolate user data into onclick/innerHTML
+  sug.innerHTML = '';
+  matches.forEach(c => {
+    const div = document.createElement('div');
+    div.style.cssText = 'padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--border);font-size:0.85rem;transition:background 0.15s';
+    div.onmouseenter = () => { div.style.background = 'var(--surface3)'; };
+    div.onmouseleave = () => { div.style.background = ''; };
+    const nameEl = document.createElement('div');
+    nameEl.style.fontWeight = '600';
+    nameEl.textContent = c.name;
+    const subEl = document.createElement('div');
+    subEl.style.cssText = 'color:var(--text3);font-size:0.75rem';
+    subEl.textContent = (c.phone || '') + ' · ⭐ ' + (c.points || 0) + ' pts';
+    div.appendChild(nameEl);
+    div.appendChild(subEl);
+    div.addEventListener('click', () => selectCustomer(c.id, c.name));
+    sug.appendChild(div);
+  });
   sug.style.display = 'block';
-  sug.innerHTML = matches.map(c => `
-    <div style="padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--border);font-size:0.85rem;transition:background 0.15s"
-         onmouseenter="this.style.background='var(--surface3)'" onmouseleave="this.style.background=''"
-         onclick="selectCustomer('${c.id}','${c.name.replace(/'/g,"\\'")}')">
-      <div style="font-weight:600">${c.name}</div>
-      <div style="color:var(--text3);font-size:0.75rem">${c.phone || ''} · ⭐ ${c.points || 0} pts</div>
-    </div>
-  `).join('');
 }
 
 function selectCustomer(id, name) {
@@ -299,10 +310,13 @@ function removeFromCart(id) {
 function clearCart() {
   _cart = [];
   _discountVal = 0;
+  _discountType = 'pct';
   _customer = '';
   _customerId = null;
   const di = document.getElementById('discount-input');
   if (di) di.value = '';
+  const dt = document.getElementById('discount-type');
+  if (dt) dt.value = 'pct';
   const cn = document.getElementById('customer-name');
   if (cn) cn.value = '';
   updateCartDisplay();
@@ -413,6 +427,7 @@ function showHoldBillPicker() {
 function resumeHold(holdId) {
   const held = DB.resumeHoldBill(holdId);
   if (!held) return;
+  // 1. Set all state variables first
   _cart = held.cart || [];
   _customer = held.customer || '';
   _customerId = held.customerId || null;
@@ -420,29 +435,17 @@ function resumeHold(holdId) {
   _discountType = held.discountType || 'pct';
   _paymentMode = held.paymentMode || 'Cash';
   document.getElementById('hold-picker-modal').style.display = 'none';
-  updateCartDisplay();
+  // 2. Render once — state is already set so skipReset=true preserves cart
+  renderBilling(true);
+  // 3. Apply DOM inputs now that the DOM exists
   const di = document.getElementById('discount-input');
   if (di && _discountVal) di.value = _discountVal;
+  const dt = document.getElementById('discount-type');
+  if (dt) dt.value = _discountType;
   const cn = document.getElementById('customer-name');
   if (cn && _customer) cn.value = _customer;
   setPaymentMode(_paymentMode);
   showToast(`Bill for "${_customer || 'Walk-in'}" resumed ✅`, 'success');
-  renderBilling(true);
-  // Re-apply state after re-render if needed
-  setTimeout(() => {
-    _cart = held.cart || [];
-    _customer = held.customer || '';
-    _customerId = held.customerId || null;
-    _discountVal = held.discountVal || 0;
-    _discountType = held.discountType || 'pct';
-    _paymentMode = held.paymentMode || 'Cash';
-    updateCartDisplay();
-    const di2 = document.getElementById('discount-input');
-    if (di2 && _discountVal) di2.value = _discountVal;
-    const cn2 = document.getElementById('customer-name');
-    if (cn2 && _customer) cn2.value = _customer;
-    setPaymentMode(_paymentMode);
-  }, 50);
 }
 
 function discardHold(holdId) {

@@ -58,10 +58,17 @@ function renderSettings() {
                 <input class="form-input" id="s-currency" value="${s.currency}" placeholder="₹" maxlength="4" />
               </div>
             </div>
-            <div class="form-group">
-              <label class="form-label">Invoice Prefix</label>
-              <input class="form-input" value="GB-" disabled style="opacity:0.5" />
-              <small style="color:var(--text3);font-size:0.75rem;margin-top:4px;display:block">Bill numbers are auto-generated as GB-XXXX</small>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">Invoice Prefix</label>
+                <input class="form-input" id="s-invoicePrefix" value="${s.invoicePrefix || 'GB-'}" placeholder="GB-" maxlength="10" />
+                <small style="color:var(--text3);font-size:0.75rem;margin-top:4px;display:block">e.g. GB- → GB-0001, INV- → INV-0001</small>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Low Stock Alert Threshold</label>
+                <input class="form-input" id="s-lowStock" type="number" min="1" max="999" value="${s.lowStockThreshold || 10}" placeholder="10" />
+                <small style="color:var(--text3);font-size:0.75rem;margin-top:4px;display:block">Warn when stock falls below this number</small>
+              </div>
             </div>
           </div>
 
@@ -159,7 +166,10 @@ function saveSettingsForm() {
   const shopName = document.getElementById('s-shopName').value.trim();
   if (!shopName) { showToast('Shop name is required', 'error'); return; }
 
+  // Spread existing settings to preserve fields not in this form (e.g. billCounter)
+  const existing = DB.getSettings();
   const s = {
+    ...existing,
     shopName,
     tagline: document.getElementById('s-tagline').value.trim(),
     address: document.getElementById('s-address').value.trim(),
@@ -169,6 +179,8 @@ function saveSettingsForm() {
     taxRate: parseFloat(document.getElementById('s-taxRate').value) || 5,
     currency: document.getElementById('s-currency').value.trim() || '₹',
     accentColor: document.getElementById('s-accentColor').value || '#00d4aa',
+    invoicePrefix: document.getElementById('s-invoicePrefix').value.trim() || 'GB-',
+    lowStockThreshold: parseInt(document.getElementById('s-lowStock').value) || 10,
   };
 
   DB.saveSettings(s);

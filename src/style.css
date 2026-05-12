@@ -491,6 +491,12 @@ input, select, textarea { font-family: var(--font); }
 .stat-change.up   { color: var(--success); }
 .stat-change.down { color: var(--danger); }
 
+/* stat-trend — same semantics, used in dashboard.js */
+.stat-trend         { font-size: 0.78rem; margin-top: 8px; font-weight: 600; }
+.stat-trend.up      { color: var(--success); }
+.stat-trend.down    { color: var(--danger); }
+.stat-trend.neutral { color: var(--text3); }
+
 /* ── Tables ────────────────────────────────────────────────── */
 .table-wrap { overflow-x: auto; border-radius: var(--radius); }
 table {
@@ -930,6 +936,7 @@ tbody tr:last-child { border-bottom: none; }
 .text-warn    { color: var(--warn); }
 .text-muted   { color: var(--text3); }
 .fw-700 { font-weight: 700; }
+.mt-6  { margin-top: 1.5rem; }
 .mt-8  { margin-top: 8px; }
 .mt-16 { margin-top: 16px; }
 .mb-16 { margin-bottom: 16px; }
