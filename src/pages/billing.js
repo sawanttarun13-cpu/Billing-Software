@@ -7,6 +7,8 @@ let _activeCategory = 'All';
 let _searchTerm = '';
 let _discountVal = 0;
 let _discountType = 'pct';
+let _loyaltyDiscount = 0;  // ₹ discount from redeemed loyalty points
+let _redeemedPoints = 0;   // points actually redeemed this bill
 let _customer = '';
 let _customerId = null;
 let _paymentMode = 'Cash';
@@ -82,8 +84,34 @@ function renderBilling(skipReset = false) {
             <button class="btn btn-ghost btn-sm" onclick="openCashCalculator()" title="Cash & Change Calculator">🧮</button>
           </div>
 
+          <!-- Loyalty Points Redemption (visible when customer has points) -->
+          <div id="loyalty-row" style="display:none;margin:8px 0;padding:8px 10px;background:rgba(34,197,94,0.07);border:1px solid rgba(34,197,94,0.25);border-radius:var(--radius-sm)">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+              <div style="font-size:0.78rem;color:var(--text2)">
+                <span style="font-weight:700;color:var(--accent)">⭐ <span id="loyalty-points-avail">0</span> pts</span>
+                <span style="color:var(--text3)"> available (10 pts = ₹1)</span>
+              </div>
+              <button class="btn btn-sm btn-ghost" id="loyalty-btn" onclick="toggleLoyaltyRedeem()" style="font-size:0.75rem;padding:4px 10px">Redeem</button>
+            </div>
+            <div id="loyalty-input-row" style="display:none;margin-top:8px;display:none">
+              <div style="display:flex;gap:6px;align-items:center">
+                <input type="number" class="form-input" id="loyalty-pts-input" placeholder="Points to redeem" min="10" step="10"
+                  style="flex:1;font-size:0.82rem;padding:6px 10px" oninput="previewLoyaltyDiscount(this.value)" />
+                <button class="btn btn-primary btn-sm" onclick="applyLoyaltyRedeem()">Apply</button>
+                <button class="btn btn-ghost btn-sm" onclick="cancelLoyaltyRedeem()">✕</button>
+              </div>
+              <div id="loyalty-preview" style="font-size:0.75rem;color:var(--success);margin-top:4px"></div>
+            </div>
+          </div>
+
+          <!-- Bill Note / Remarks -->
+          <div style="margin:8px 0">
+            <input class="form-input" id="bill-note" placeholder="📝 Bill note / remarks (optional)" style="font-size:0.8rem;padding:7px 12px" />
+          </div>
+
           <div class="cart-row"><span>Subtotal</span><span id="subtotal-val">₹0.00</span></div>
           <div class="cart-row" id="discount-row-display" style="display:none"><span>Discount</span><span id="discount-disp" style="color:var(--danger)">-₹0.00</span></div>
+          <div class="cart-row" id="loyalty-disc-row" style="display:none"><span>⭐ Points Discount</span><span id="loyalty-disc-disp" style="color:var(--success)">-₹0.00</span></div>
           <div class="cart-row"><span>Tax (<span id="tax-rate-label">5</span>%)</span><span id="tax-val">₹0.00</span></div>
           <div class="cart-row total"><span>TOTAL</span><span id="grand-total-val">₹0.00</span></div>
           <button class="btn btn-primary btn-block btn-lg mt-8" onclick="checkoutBilling()" id="checkout-btn">
@@ -176,6 +204,7 @@ function selectCustomer(id, name) {
   if (input) input.value = name;
   const sug = document.getElementById('cust-suggestions');
   if (sug) sug.style.display = 'none';
+  updateLoyaltyRow(); // show/hide points redemption
   showToast(`Customer: ${name} selected ✅`, 'info');
 }
 
@@ -311,6 +340,8 @@ function clearCart() {
   _cart = [];
   _discountVal = 0;
   _discountType = 'pct';
+  _loyaltyDiscount = 0;
+  _redeemedPoints = 0;
   _customer = '';
   _customerId = null;
   const di = document.getElementById('discount-input');
@@ -373,7 +404,7 @@ function updateCartTotals() {
   let discount = _discountType === 'pct'
     ? +(subtotal * (_discountVal / 100)).toFixed(2)
     : Math.min(_discountVal, subtotal);
-  const taxable = subtotal - discount;
+  const taxable = subtotal - discount - _loyaltyDiscount;
   const tax = +(taxable * taxRate).toFixed(2);
   const grand = +(taxable + tax).toFixed(2);
 
@@ -386,6 +417,9 @@ function updateCartTotals() {
   const discRow = document.getElementById('discount-row-display');
   if (discRow) discRow.style.display = discount > 0 ? 'flex' : 'none';
   set('discount-disp', `-${curr}${discount.toFixed(2)}`);
+  const loyDiscRow = document.getElementById('loyalty-disc-row');
+  if (loyDiscRow) loyDiscRow.style.display = _loyaltyDiscount > 0 ? 'flex' : 'none';
+  set('loyalty-disc-disp', `-${curr}${_loyaltyDiscount.toFixed(2)}`);
 }
 
 /* ── Hold Bills ───────────────────────────────────────────── */
@@ -495,6 +529,70 @@ function calcChange() {
 }
 
 /* ── Checkout ─────────────────────────────────────────────── */
+/* ── Loyalty Points Redemption ─────────────────────────────── */
+function updateLoyaltyRow() {
+  const row = document.getElementById('loyalty-row');
+  if (!row) return;
+  if (!_customerId) { row.style.display = 'none'; return; }
+  const cust = DB.getCustomers().find(c => c.id === _customerId);
+  const pts = cust ? (cust.points || 0) : 0;
+  if (pts >= 10) {
+    row.style.display = 'block';
+    const avail = document.getElementById('loyalty-points-avail');
+    if (avail) avail.textContent = pts;
+  } else {
+    row.style.display = 'none';
+  }
+}
+
+function toggleLoyaltyRedeem() {
+  const inputRow = document.getElementById('loyalty-input-row');
+  if (!inputRow) return;
+  const isHidden = inputRow.style.display === 'none' || inputRow.style.display === '';
+  inputRow.style.display = isHidden ? 'block' : 'none';
+  if (isHidden) {
+    const inp = document.getElementById('loyalty-pts-input');
+    if (inp) { inp.value = ''; inp.focus(); }
+    const prev = document.getElementById('loyalty-preview');
+    if (prev) prev.textContent = '';
+  }
+}
+
+function previewLoyaltyDiscount(val) {
+  const pts = parseInt(val) || 0;
+  const discount = +(pts / 10).toFixed(2);
+  const prev = document.getElementById('loyalty-preview');
+  if (prev) prev.textContent = pts >= 10 ? `= ₹${discount.toFixed(2)} discount` : pts > 0 ? 'Minimum 10 points' : '';
+}
+
+function applyLoyaltyRedeem() {
+  const inp = document.getElementById('loyalty-pts-input');
+  const pts = parseInt(inp?.value) || 0;
+  if (pts < 10) { showToast('Minimum 10 points required', 'error'); return; }
+  const cust = DB.getCustomers().find(c => c.id === _customerId);
+  const available = cust ? (cust.points || 0) : 0;
+  const actual = Math.min(pts, available);
+  if (actual < 10) { showToast('Not enough points', 'error'); return; }
+  _redeemedPoints = actual;
+  _loyaltyDiscount = +(actual / 10).toFixed(2);
+  const inputRow = document.getElementById('loyalty-input-row');
+  if (inputRow) inputRow.style.display = 'none';
+  const btn = document.getElementById('loyalty-btn');
+  if (btn) { btn.textContent = `₹${_loyaltyDiscount.toFixed(2)} applied`; btn.disabled = true; }
+  updateCartTotals();
+  showToast(`${actual} pts redeemed = ₹${_loyaltyDiscount.toFixed(2)} off ✅`, 'success');
+}
+
+function cancelLoyaltyRedeem() {
+  _loyaltyDiscount = 0;
+  _redeemedPoints = 0;
+  const inputRow = document.getElementById('loyalty-input-row');
+  if (inputRow) inputRow.style.display = 'none';
+  const btn = document.getElementById('loyalty-btn');
+  if (btn) { btn.textContent = 'Redeem'; btn.disabled = false; }
+  updateCartTotals();
+}
+
 function checkoutBilling() {
   try {
     if (_cart.length === 0) { showToast('Cart is empty!', 'error'); return; }
@@ -524,15 +622,19 @@ function checkoutBilling() {
       }
     }
 
+    const billNote = (document.getElementById('bill-note')?.value || '').trim();
     const bill = DB.saveBill({
       customer: finalName,
       customerId: _customerId,
       items: _cart.map(i => ({ ...i })),
       subtotal, discount,
       discountType: _discountType,
+      loyaltyDiscount: _loyaltyDiscount,
+      redeemedPoints: _redeemedPoints,
       tax, taxRate: s.taxRate,
       total,
       paymentMode: _paymentMode,
+      note: billNote || undefined,
     });
 
     // Adjust Stock
@@ -540,6 +642,10 @@ function checkoutBilling() {
       DB.adjustStock(item.id, -item.qty, 'Sale: #' + bill.billNo);
     });
 
+    // Deduct redeemed points (already applied as discount)
+    if (_customerId && _redeemedPoints > 0) {
+      DB.redeemCustomerPoints(_customerId, _redeemedPoints);
+    }
     // Award loyalty points (1 point per ₹10 spent)
     if (_customerId) {
       DB.addCustomerPoints(_customerId, Math.floor(total / 10));
@@ -549,6 +655,8 @@ function checkoutBilling() {
     showInvoiceModal(bill);
     _cart = [];
     _discountVal = 0;
+    _loyaltyDiscount = 0;
+    _redeemedPoints = 0;
     _customer = '';
     _customerId = null;
     updateCartDisplay();

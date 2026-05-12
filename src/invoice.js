@@ -89,6 +89,7 @@ function buildInvoiceHTML(bill) {
         </div>
       </div>
 
+      ${bill.note ? `<div style="margin-top:20px;padding:12px 16px;background:rgba(0,0,0,0.03);border-left:3px solid var(--accent);border-radius:4px;font-size:0.82rem;color:var(--text2)"><strong>Note:</strong> ${bill.note}</div>` : ''}
       <div class="inv-footer" style="margin-top: 50px; padding-top: 20px; border-top: 1px solid var(--border); text-align: center;">
         <div style="font-size: 0.9rem; font-weight: 600; color: var(--text2); margin-bottom: 4px;">${s.thankYou || 'Thank you for shopping with us!'}</div>
         <div style="font-size: 0.7rem; color: var(--text3); font-style: italic;">Please keep this invoice for your records.</div>

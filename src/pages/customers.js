@@ -15,6 +15,7 @@ function renderCustomers() {
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
         <input class="form-input" placeholder="Search by name or phone…" oninput="custSearch(this.value)" />
       </div>
+      <button class="btn btn-ghost btn-sm" onclick="exportCustomersCSV()" title="Export to CSV">↓ Export CSV</button>
       <button class="btn btn-primary" onclick="openCustomerModal(null)" id="add-customer-btn">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
         Add Customer
@@ -271,4 +272,32 @@ function doDeleteCustomer(id, name) {
   closeProductModal();
   showToast(`Customer "${name}" deleted`, 'info');
   renderCustomers();
+}
+
+/* ── CSV Export ────────────────────────────────────────── */
+function exportCustomersCSV() {
+  const customers = DB.getCustomers();
+  if (customers.length === 0) { showToast('No customers to export', 'error'); return; }
+  const bills = DB.getBills();
+  const getBillCount = (name) => bills.filter(b => b.customer === name).length;
+  const getTotalSpent = (name) => bills.filter(b => b.customer === name).reduce((s, b) => s + b.total, 0);
+  const headers = ['Name', 'Phone', 'Email', 'Address', 'Loyalty Points', 'Total Bills', 'Total Spent'];
+  const rows = customers.map(c => [
+    c.name,
+    c.phone || '',
+    c.email || '',
+    c.address || '',
+    c.points || 0,
+    getBillCount(c.name),
+    getTotalSpent(c.name).toFixed(2),
+  ].map(v => `"${String(v).replace(/"/g, '""')}"`));
+  const csv = '\ufeff' + [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `Customers_Export_${new Date().toISOString().split('T')[0]}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast(`${customers.length} customers exported ✅`, 'success');
 }

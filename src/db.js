@@ -349,6 +349,17 @@ const DB = (() => {
     if (idx > -1) { list[idx].points = (list[idx].points || 0) + points; }
     localStorage.setItem(KEYS.customers, JSON.stringify(list));
   }
+  function redeemCustomerPoints(customerId, pointsToRedeem) {
+    // 10 points = ₹1 discount
+    const list = getCustomers();
+    const idx = list.findIndex(c => c.id === customerId);
+    if (idx === -1) return 0;
+    const available = list[idx].points || 0;
+    const actual = Math.min(pointsToRedeem, available);
+    list[idx].points = available - actual;
+    localStorage.setItem(KEYS.customers, JSON.stringify(list));
+    return actual; // returns points actually deducted
+  }
 
   /* ── Hold Bills ───────────────────────────────────────── */
   function getHoldBills() {
@@ -437,7 +448,7 @@ const DB = (() => {
     getLowStockProducts, getOutOfStockProducts, adjustStock, getStockLog,
     getBills, saveBill, clearBills, getTodayStats, getTopProducts, getWeekRevenue,
     getGSTReport, getCategoryRevenue, getMonthlyRevenue,
-    getCustomers, saveCustomer, deleteCustomer, getCustomerBills, addCustomerPoints,
+    getCustomers, saveCustomer, deleteCustomer, getCustomerBills, addCustomerPoints, redeemCustomerPoints,
     getHoldBills, holdBill, resumeHoldBill, deleteHoldBill,
     getSettings, saveSettings,
     exportBackup, importBackup,

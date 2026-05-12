@@ -33,6 +33,7 @@ function renderHistory() {
       </div>
       <div style="align-self:flex-end">
         <button class="btn btn-ghost btn-sm" onclick="histClearFilter()">Clear Filters</button>
+        <button class="btn btn-ghost btn-sm" onclick="exportBillsCSV()" title="Export visible bills to CSV">↓ Export CSV</button>
       </div>
     </div>
     <div class="card">
@@ -176,4 +177,32 @@ function reprintBill(id) {
     _currentPrintBill = bill;
     printInvoice();
   }
+}
+
+/* ── CSV Export ────────────────────────────────────────── */
+function exportBillsCSV() {
+  const bills = getFilteredBills();
+  if (bills.length === 0) { showToast('No bills to export', 'error'); return; }
+  const s = DB.getSettings();
+  const headers = ['Bill No', 'Date', 'Customer', 'Items', 'Payment Mode', 'Subtotal', 'Discount', 'Tax', 'Total'];
+  const rows = bills.map(b => [
+    b.billNo,
+    new Date(b.date).toLocaleString(),
+    b.customer || 'Walk-in Customer',
+    b.items.map(i => `${i.name}(x${i.qty})`).join('; '),
+    b.paymentMode || 'Cash',
+    Number(b.subtotal || 0).toFixed(2),
+    Number(b.discount || 0).toFixed(2),
+    Number(b.tax || 0).toFixed(2),
+    Number(b.total || 0).toFixed(2),
+  ].map(v => `"${String(v).replace(/"/g, '""')}"`));
+  const csv = '\ufeff' + [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `Bills_Export_${new Date().toISOString().split('T')[0]}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast(`${bills.length} bills exported ✅`, 'success');
 }
