@@ -137,25 +137,30 @@ function applySettingsToUI() {
 let currentSession = null;
 
 function initAuth() {
-  auth.init((session) => {
+  auth.init(async (session) => {
     currentSession = session;
     const appEl = document.getElementById('app');
     const authEl = document.getElementById('auth-overlay');
 
     if (session) {
-      // Logged in
-      DB.init(session.user.id);
-      
+      // Show app immediately (localStorage data renders instantly)
       authEl.style.display = 'none';
       appEl.style.display = 'flex';
-      
-      // Call boot if not already booted
+
+      // Boot UI shell first so user sees something right away
       if (!window.__appBooted) {
         boot();
-      } else {
-        applySettingsToUI();
-        navigate(_currentPage || 'dashboard');
       }
+
+      // Init DB: seeds localStorage + kicks off async cloud pull
+      // Import supabase client from supabase.js module
+      let sbClient = null;
+      try { const m = await import('./supabase.js'); sbClient = m.supabase; } catch(e) {}
+      await DB.init(session.user.id, sbClient);
+
+      // Re-apply settings and re-render current page after cloud pull
+      applySettingsToUI();
+      navigate(_currentPage || 'dashboard');
     } else {
       // Logged out
       authEl.style.display = 'flex';

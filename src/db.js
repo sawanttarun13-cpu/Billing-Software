@@ -1,5 +1,5 @@
 /* ============================================================
-   GroceryBill Pro — Data Layer (localStorage) v2
+   GroceryBill Pro — Data Layer v3 (Offline-First + Cloud Sync)
    ============================================================ */
 
 const DB = (() => {
@@ -142,6 +142,9 @@ const DB = (() => {
   function getProducts() {
     return JSON.parse(localStorage.getItem(KEYS.products) || '[]');
   }
+  function _setProducts(arr) { // called by Sync.pullAll
+    localStorage.setItem(KEYS.products, JSON.stringify(arr));
+  }
   function saveProduct(product) {
     const list = getProducts();
     if (product.id) {
@@ -152,11 +155,27 @@ const DB = (() => {
       list.push(product);
     }
     localStorage.setItem(KEYS.products, JSON.stringify(list));
+    // ☁️ async cloud sync — updates local id with cloud UUID if new
+    if (typeof Sync !== 'undefined' && Sync.isReady()) {
+      Sync.upsertProduct(product).then(cloudId => {
+        if (cloudId && product.id !== cloudId) {
+          // Replace local temp id with cloud UUID in localStorage
+          const updated = getProducts();
+          const i = updated.findIndex(p => p.id === product.id);
+          if (i > -1) { updated[i].id = cloudId; product.id = cloudId; }
+          localStorage.setItem(KEYS.products, JSON.stringify(updated));
+        }
+      }).catch(console.error);
+    }
     return product;
   }
   function deleteProduct(id) {
     const list = getProducts().filter(p => p.id !== id);
     localStorage.setItem(KEYS.products, JSON.stringify(list));
+    // ☁️ async cloud delete
+    if (typeof Sync !== 'undefined' && Sync.isReady()) {
+      Sync.deleteProduct(id).catch(console.error);
+    }
   }
   function clearProducts() {
     localStorage.removeItem(KEYS.products);
@@ -178,10 +197,15 @@ const DB = (() => {
     const oldStock = list[idx].stock;
     list[idx].stock = Math.max(0, oldStock + delta);
     localStorage.setItem(KEYS.products, JSON.stringify(list));
-    // Log movement
+    const logEntry = { id: 'sl_' + Date.now(), productId, productName: list[idx].name, delta, oldStock, newStock: list[idx].stock, reason: reason || 'Manual Adjustment', date: new Date().toISOString() };
     const log = getStockLog();
-    log.unshift({ id: 'sl_' + Date.now(), productId, productName: list[idx].name, delta, oldStock, newStock: list[idx].stock, reason: reason || 'Manual Adjustment', date: new Date().toISOString() });
-    localStorage.setItem(KEYS.stockLog, JSON.stringify(log.slice(0, 500))); // keep last 500
+    log.unshift(logEntry);
+    localStorage.setItem(KEYS.stockLog, JSON.stringify(log.slice(0, 500)));
+    // ☁️ sync updated product stock + stock log
+    if (typeof Sync !== 'undefined' && Sync.isReady()) {
+      Sync.upsertProduct(list[idx]).catch(console.error);
+      Sync.insertStockLog(logEntry).catch(console.error);
+    }
     return list[idx];
   }
 
@@ -194,18 +218,19 @@ const DB = (() => {
   function getBills() {
     return JSON.parse(localStorage.getItem(KEYS.bills) || '[]');
   }
+  function _setBills(arr) { // called by Sync.pullAll
+    localStorage.setItem(KEYS.bills, JSON.stringify(arr));
+  }
   function saveBill(bill) {
     const list = getBills();
     if (!bill.id) {
       bill.id = 'bill_' + Date.now();
-      // Persisted sequential counter — survives bill clears & deletions
       const s = getSettings();
       const next = (s.billCounter || 1000) + 1;
       bill.billNo = (s.invoicePrefix || 'GB-') + String(next).padStart(4, '0');
       saveSettings({ ...s, billCounter: next });
       bill.date = new Date().toISOString();
       bill.settings = getSettings();
-      // Snapshot category on each item so it survives future product deletions
       bill.items = bill.items.map(it => {
         if (!it.category) {
           const prod = getProducts().find(p => p.id === it.id);
@@ -216,6 +241,17 @@ const DB = (() => {
     }
     list.unshift(bill);
     localStorage.setItem(KEYS.bills, JSON.stringify(list));
+    // ☁️ async cloud sync — replace local id with cloud UUID
+    if (typeof Sync !== 'undefined' && Sync.isReady()) {
+      Sync.insertBill(bill).then(cloudId => {
+        if (cloudId && bill.id !== cloudId) {
+          const updated = getBills();
+          const i = updated.findIndex(b => b.id === bill.id);
+          if (i > -1) { updated[i].id = cloudId; bill.id = cloudId; }
+          localStorage.setItem(KEYS.bills, JSON.stringify(updated));
+        }
+      }).catch(console.error);
+    }
     return bill;
   }
   function clearBills() {
@@ -320,6 +356,9 @@ const DB = (() => {
   function getCustomers() {
     return JSON.parse(localStorage.getItem(KEYS.customers) || '[]');
   }
+  function _setCustomers(arr) { // called by Sync.pullAll
+    localStorage.setItem(KEYS.customers, JSON.stringify(arr));
+  }
   function saveCustomer(customer) {
     const list = getCustomers();
     if (customer.id) {
@@ -332,11 +371,25 @@ const DB = (() => {
       list.push(customer);
     }
     localStorage.setItem(KEYS.customers, JSON.stringify(list));
+    // ☁️ async cloud sync
+    if (typeof Sync !== 'undefined' && Sync.isReady()) {
+      Sync.upsertCustomer(customer).then(cloudId => {
+        if (cloudId && customer.id !== cloudId) {
+          const updated = getCustomers();
+          const i = updated.findIndex(c => c.id === customer.id);
+          if (i > -1) { updated[i].id = cloudId; customer.id = cloudId; }
+          localStorage.setItem(KEYS.customers, JSON.stringify(updated));
+        }
+      }).catch(console.error);
+    }
     return customer;
   }
   function deleteCustomer(id) {
     const list = getCustomers().filter(c => c.id !== id);
     localStorage.setItem(KEYS.customers, JSON.stringify(list));
+    if (typeof Sync !== 'undefined' && Sync.isReady()) {
+      Sync.deleteCustomer(id).catch(console.error);
+    }
   }
   function getCustomerBills(customerId) {
     const customer = getCustomers().find(c => c.id === customerId);
@@ -348,9 +401,11 @@ const DB = (() => {
     const idx = list.findIndex(c => c.id === customerId);
     if (idx > -1) { list[idx].points = (list[idx].points || 0) + points; }
     localStorage.setItem(KEYS.customers, JSON.stringify(list));
+    if (typeof Sync !== 'undefined' && Sync.isReady()) {
+      Sync.upsertCustomer(list[idx]).catch(console.error);
+    }
   }
   function redeemCustomerPoints(customerId, pointsToRedeem) {
-    // 10 points = ₹1 discount
     const list = getCustomers();
     const idx = list.findIndex(c => c.id === customerId);
     if (idx === -1) return 0;
@@ -358,7 +413,10 @@ const DB = (() => {
     const actual = Math.min(pointsToRedeem, available);
     list[idx].points = available - actual;
     localStorage.setItem(KEYS.customers, JSON.stringify(list));
-    return actual; // returns points actually deducted
+    if (typeof Sync !== 'undefined' && Sync.isReady()) {
+      Sync.upsertCustomer(list[idx]).catch(console.error);
+    }
+    return actual;
   }
 
   /* ── Hold Bills ───────────────────────────────────────── */
@@ -388,8 +446,18 @@ const DB = (() => {
   function getSettings() {
     return { ...DEFAULT_SETTINGS, ...JSON.parse(localStorage.getItem(KEYS.settings) || '{}') };
   }
+  function _setSettings(s) { // called by Sync.pullAll
+    localStorage.setItem(KEYS.settings, JSON.stringify({ ...DEFAULT_SETTINGS, ...s }));
+  }
   function saveSettings(s) {
     localStorage.setItem(KEYS.settings, JSON.stringify(s));
+    // ☁️ async cloud sync (debounced to avoid spam on rapid counter updates)
+    if (typeof Sync !== 'undefined' && Sync.isReady()) {
+      clearTimeout(saveSettings._timer);
+      saveSettings._timer = setTimeout(() => {
+        Sync.upsertSettings(s).catch(console.error);
+      }, 800);
+    }
   }
 
   /* ── Backup / Restore ─────────────────────────────────── */
@@ -438,9 +506,50 @@ const DB = (() => {
     return new Date(iso).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
   }
 
-  function init(userId) {
+  async function init(userId, supabaseClient) {
     window.authUserId = userId;
-    seed();
+    seed(); // seed localStorage with defaults if empty
+
+    if (supabaseClient) {
+      // ☁️ Initialize cloud sync engine
+      Sync.init(supabaseClient, userId);
+      // Show syncing indicator
+      _showSyncBadge('syncing');
+      Sync.onStatusChange(_showSyncBadge);
+      // Pull from cloud — cloud is source of truth
+      const result = await Sync.pullAll({
+        getProducts, getCustomers, getBills, getSettings,
+        _setProducts, _setBills, _setCustomers, _setSettings,
+      });
+      if (result.success) {
+        _showSyncBadge('synced');
+        setTimeout(() => _showSyncBadge('idle'), 2000);
+      } else {
+        _showSyncBadge('offline');
+      }
+    }
+  }
+
+  function _showSyncBadge(status) {
+    let badge = document.getElementById('sync-status-badge');
+    if (!badge) {
+      badge = document.createElement('div');
+      badge.id = 'sync-status-badge';
+      badge.style.cssText = 'position:fixed;bottom:16px;right:16px;padding:6px 14px;border-radius:20px;font-size:0.75rem;font-weight:600;z-index:9999;transition:all 0.3s ease;box-shadow:0 2px 8px rgba(0,0,0,0.2)';
+      document.body.appendChild(badge);
+    }
+    const map = {
+      syncing: { text: '☁️ Syncing…',   bg: '#3b82f6', color: '#fff' },
+      synced:  { text: '✅ Synced',      bg: '#22c55e', color: '#fff' },
+      error:   { text: '⚠️ Sync Error', bg: '#ef4444', color: '#fff' },
+      offline: { text: '📴 Offline',     bg: '#f59e0b', color: '#fff' },
+      idle:    { text: '',               bg: 'transparent', color: 'transparent' },
+    };
+    const s = map[status] || map.idle;
+    badge.textContent = s.text;
+    badge.style.background = s.bg;
+    badge.style.color = s.color;
+    badge.style.opacity = status === 'idle' ? '0' : '1';
   }
 
   return {
@@ -453,6 +562,8 @@ const DB = (() => {
     getSettings, saveSettings,
     exportBackup, importBackup,
     formatCurrency, formatDate, formatDateShort,
+    // Internal setters for Sync engine
+    _setProducts, _setBills, _setCustomers, _setSettings,
     init,
   };
 })();

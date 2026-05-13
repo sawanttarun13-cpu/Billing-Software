@@ -22,11 +22,27 @@
 
 ---
 
-# Phase 3 — Medium Priority
+# Phase 3 — Medium Priority ✅
 
-- [ ] **db.js** — Add `redeemCustomerPoints()` function
-- [ ] **billing.js** — Add loyalty points redemption UI at checkout
-- [ ] **billing.js** — Add Bill Notes / Remarks field
-- [ ] **invoice.js** — Render `bill.note` on invoice if present
-- [ ] **history.js** — Add CSV export button for bills
-- [ ] **customers.js** — Add CSV export button for customers
+- [x] **db.js** — Add `redeemCustomerPoints()` function
+- [x] **billing.js** — Add loyalty points redemption UI at checkout
+- [x] **billing.js** — Add Bill Notes / Remarks field
+- [x] **invoice.js** — Render `bill.note` on invoice if present
+- [x] **history.js** — Add CSV export button for bills
+- [x] **customers.js** — Add CSV export button for customers
+
+---
+
+# Phase 5 — Cloud Synchronization ✅
+
+- [x] **supabase DB** — Schema already had all 5 tables (`products`, `bills`, `customers`, `settings`, `stock_log`) with RLS enabled
+- [x] **supabase DB** — Migration: added `invoice_prefix`, `bill_counter` to `settings`; `loyalty_discount`, `redeemed_points`, `note` to `bills`; `image_data` to `products`
+- [x] **supabase RLS** — Re-created all 5 policies with `WITH CHECK (auth.uid() = user_id)` for INSERT security hardening
+- [x] **src/sync.js** — NEW: Offline-First Cloud Sync Engine (field mapping, pullAll, pushAll, per-entity upsert/delete/insert)
+- [x] **src/db.js** — All writes go to localStorage first (instant UX), then fire async cloud sync via `Sync.*`
+- [x] **src/db.js** — `init()` now accepts supabase client, triggers `Sync.pullAll()` (cloud = source of truth on login)
+- [x] **src/db.js** — `_setProducts/Bills/Customers/Settings` internal setters exposed for Sync engine
+- [x] **src/db.js** — `saveSettings` debounced 800ms to avoid spamming cloud on bill counter increments
+- [x] **src/main.js** — `initAuth` async: imports supabase client, passes to `DB.init()`, re-renders after cloud pull
+- [x] **index.html** — `sync.js` loaded before `db.js`
+- [x] **UI** — Floating sync badge (bottom-right): ☁️ Syncing… → ✅ Synced → ⚠️ Error / 📴 Offline
